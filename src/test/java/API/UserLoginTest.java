@@ -14,26 +14,24 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.stream.Stream;
 
 import static io.restassured.RestAssured.given;
-import static org.apache.http.HttpStatus.*;
+import static org.apache.http.HttpStatus.SC_OK;
+import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
 import static org.hamcrest.Matchers.*;
 
 public class UserLoginTest extends BaseStep {
     private String email;
     private String userToken;
+
     @BeforeEach
     void setUp() {
         email = generateRandomEmail();
-        UserAPI.createUser(email, "qwerty123", "testUser");
+        userToken = UserAPI.createUser(email, "qwerty123", "testUser");
     }
 
     @AfterEach
     void tearDown() {
         if (userToken != null) {
-            given()
-                    .header("Authorization", userToken.startsWith("Bearer ") ? userToken : "Bearer " + userToken)
-                    .delete("/api/auth/user")
-                    .then()
-                    .statusCode(202);
+            UserAPI.deleteUser(userToken);
         }
     }
 

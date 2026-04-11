@@ -1,12 +1,16 @@
 package API;
 
 import API.FirstStepApi.BaseStep;
-import API.FirstStepApi.UserAPI;
+import io.restassured.response.Response;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
+
 import static io.restassured.RestAssured.given;
-import static org.apache.http.HttpStatus.*;
+import static org.apache.http.HttpStatus.SC_FORBIDDEN;
+import static org.apache.http.HttpStatus.SC_OK;
 import static org.hamcrest.Matchers.equalTo;
 
 public class UserCreateTest extends BaseStep {
@@ -14,33 +18,52 @@ public class UserCreateTest extends BaseStep {
 
     @AfterEach
     void tearDown() {
-        if (userToken != null) {
-            given()
-                    .header("Authorization", userToken.startsWith("Bearer ") ? userToken : "Bearer " + userToken)
-                    .delete("/api/auth/user")
-                    .then()
-                    .statusCode(202);
+        if (userToken != null && !userToken.isBlank()) {
+            Response deleteResponse = given()
+                    .header("Authorization", "Bearer " + userToken)
+                    .when()
+                    .delete("/api/auth/user");
+
+            deleteResponse.then().log().all();
         }
     }
+
     @Test
     @DisplayName("Успешное создание пользователя")
     public void createNewUserTestReturnsOK() {
         String email = generateRandomEmail();
-        given()
+
+        Response response = given()
                 .contentType("application/json")
-                .body("{\"email\":\"" + email + "\",\"password\":\"qwerty123\",\"name\":\"user\"}")
-                .post("/api/auth/register")
-                .then()
-                .statusCode(SC_OK);
+                .body(Map.of(
+                        "email", email,
+                        "password", "qwerty123",
+                        "name", "user"
+                ))
+                .when()
+                .post("/api/auth/register");
+
+        userToken = response.then()
+                .statusCode(SC_OK)
+                .body("success", equalTo(true))
+                .extract()
+                .path("accessToken");
     }
+
 
     @Test
     @DisplayName("Повторное создание пользователя")
     public void createDoubleUsersReturns403() {
         String email = generateRandomEmail();
+
         given()
                 .contentType("application/json")
-                .body("{\"email\":\"" + email + "\",\"password\":\"qwerty123\",\"name\":\"user\"}")
+                .body(Map.of(
+                        "email", email,
+                        "password", "qwerty123",
+                        "name", "user"
+                ))
+                .when()
                 .post("/api/auth/register")
                 .then()
                 .statusCode(SC_OK)
@@ -48,7 +71,12 @@ public class UserCreateTest extends BaseStep {
 
         given()
                 .contentType("application/json")
-                .body("{\"email\":\"" + email + "\",\"password\":\"qwerty123\",\"name\":\"user\"}")
+                .body(Map.of(
+                        "email", email,
+                        "password", "qwerty123",
+                        "name", "user"
+                ))
+                .when()
                 .post("/api/auth/register")
                 .then()
                 .statusCode(SC_FORBIDDEN);
@@ -59,7 +87,11 @@ public class UserCreateTest extends BaseStep {
     public void createUserWithoutEmailReturns403() {
         given()
                 .contentType("application/json")
-                .body("{\"password\":\"qwerty123\",\"name\":\"user\"}")
+                .body(Map.of(
+                        "password", "qwerty123",
+                        "name", "user"
+                ))
+                .when()
                 .post("/api/auth/register")
                 .then()
                 .statusCode(SC_FORBIDDEN);

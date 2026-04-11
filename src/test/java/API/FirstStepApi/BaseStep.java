@@ -18,18 +18,4 @@ public abstract class BaseStep {
         return "user_" + System.currentTimeMillis() + "@yandex.ru";
     }
 
-    private  String getAccessToken(String email, String password) {
-        LoginRequest login = new LoginRequest(email, password);
-
-        return given()
-                .header("Content-type", "application/json")
-                .body(login)
-                .when()
-                .post("/auth/login")
-                .then()
-                .statusCode(200)
-                .extract()
-                .path("accessToken");
-    }
-
 }
